@@ -11,16 +11,6 @@ export const enum Player {
 }
 
 /**
- * Stores the type of a game player when
- * computing its score when playing against the computer.
- */
-export const enum PlayerComputeType {
-    Human = -1,
-    None = 0,
-    Computer = +1
-}
-
-/**
  * Calculates the next user that have to play.
  *
  * @param player player object

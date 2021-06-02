@@ -1,5 +1,5 @@
 import GameEntity from '@bot/channel/GameEntity';
-import { getOpponent, Player, PlayerComputeType } from '@tictactoe/Player';
+import { Player } from '@tictactoe/Player';
 import Game from '@tictactoe/Game';
 import localize from '@config/localize';
 
@@ -18,19 +18,10 @@ export default class AI implements GameEntity {
      * Display name of an AI
      */
     displayName = localize.__('game.ai');
-
     /**
-     * Operates the AI algorithm on a game instance.
-     *
-     * @param game game object
+     * Maximum depth of the Minimax algorithm
      */
-    public operate(game: Game): AIComputeResult {
-        if (!game.boardEmpty) {
-            return AI.minimax(game.clone(), game.emptyCellAmount, game.currentPlayer);
-        } else {
-            return { move: Math.floor(Math.random() * game.boardSize), score: 0 };
-        }
-    }
+    maxDepth = -1;
 
     /**
      * Generates the string representation of the AI in a Discord text channel.
@@ -39,68 +30,82 @@ export default class AI implements GameEntity {
         return this.displayName;
     }
 
-    /**
-     * Runs the minimax algorithm for a player at a specific depth in a game.
-     *
-     * @param game game object
-     * @param depth depth at which the algorithm will be operated
-     * @param player player object
-     */
-    private static minimax(game: Game, depth: number, player: Player): AIComputeResult {
+    public maxAlphaBeta(game: Game, alpha = -2, beta = 2): AIComputeResult {
+        let score = -2;
+        let move = undefined;
+
+        // Compute winning scores
         const winner = game.winner;
-        const type = AI.getComputeType(player);
-        let best: AIComputeResult;
-
-        // Default score
-        if (type === PlayerComputeType.Computer) {
-            best = { score: -1000 };
-        } else {
-            best = { score: +1000 };
+        switch (winner) {
+            case Player.First:
+                return { score: -1, move: 0 };
+            case Player.Second:
+                return { score: 1, move: 0 };
+            case undefined:
+                return { score: 0, move: 0 };
         }
 
-        // Check for a winner
-        if (depth === 0 || winner) {
-            return { score: AI.getComputeType(winner) };
-        }
-
-        // Go through all cells
+        // Go through all empty cells if no winner for now
         game.board.forEach((cell, index) => {
             if (cell === Player.None) {
-                game.updateBoard(player, index);
-                const deep = this.minimax(game, depth - 1, getOpponent(player));
+                const cloned = game.clone();
+                cloned.updateBoard(Player.Second, index);
+                const minCompute = this.minAlphaBeta(cloned, alpha, beta);
 
-                game.updateBoard(Player.None, index);
-                deep.move = index;
+                if (minCompute.score > score) {
+                    score = minCompute.score;
+                    move = index;
+                }
 
-                if (type === PlayerComputeType.Computer) {
-                    if (deep.score > best.score) {
-                        best = deep;
-                    }
-                } else {
-                    if (deep.score < best.score) {
-                        best = deep;
-                    }
+                if (score >= beta) {
+                    return { score, move: index };
+                }
+                if (score > alpha) {
+                    alpha = score;
                 }
             }
         });
 
-        return best;
+        return { score, move };
     }
 
-    /**
-     * Converts the player type to a useable type by the algorithm to compute scores.
-     *
-     * @param player player type object
-     */
-    private static getComputeType(player: Player): PlayerComputeType {
-        if (player === Player.First) {
-            return PlayerComputeType.Human;
-        } else if (player === Player.Second) {
-            // Computer is always at the second place
-            return PlayerComputeType.Computer;
-        } else {
-            return PlayerComputeType.None;
+    public minAlphaBeta(game: Game, alpha = -2, beta = 2): AIComputeResult {
+        let score = 2;
+        let move = undefined;
+
+        // Compute winning scores
+        const winner = game.winner;
+        switch (winner) {
+            case Player.First:
+                return { score: -1, move: 0 };
+            case Player.Second:
+                return { score: 1, move: 0 };
+            case undefined:
+                return { score: 0, move: 0 };
         }
+
+        // Go through all empty cells if no winner for now
+        game.board.forEach((cell, index) => {
+            if (cell === Player.None) {
+                const cloned = game.clone();
+                cloned.updateBoard(Player.First, index);
+                const maxCompute = this.maxAlphaBeta(cloned, alpha, beta);
+
+                if (maxCompute.score < score) {
+                    score = maxCompute.score;
+                    move = index;
+                }
+
+                if (score <= alpha) {
+                    return { score, move: index };
+                }
+                if (score < beta) {
+                    beta = score;
+                }
+            }
+        });
+
+        return { score, move };
     }
 }
 

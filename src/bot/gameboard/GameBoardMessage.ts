@@ -85,7 +85,7 @@ export default class GameBoardMessage {
     public async attemptNextTurn(): Promise<void> {
         const currentEntity = this.getEntity(this.game.currentPlayer);
         if (currentEntity instanceof AI) {
-            const result = currentEntity.operate(this.game);
+            const result = currentEntity.maxAlphaBeta(this.game);
             if (result.move !== undefined) {
                 await this.playTurn(result.move);
             }
